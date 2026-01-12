@@ -40,16 +40,35 @@ app.get("/", async (req, res) => {        // Cria endpoint na rota da raiz do pr
   });
 });
 // Rota: GET /usuarios
+// Rota: GET /usuarios
 app.get("/usuarios", async (req, res) => {
   console.log("Rota GET /usuarios solicitada");
   try {
     const db = conectarBD();
-    const resultado = await db.query(`
-      SELECT id, name, email, contact, photo_url, created_at
-      FROM users
+    
+    // Busca todos os usuários
+    const usuarios = await db.query(`
+      SELECT id, name, email, contact, photo_url, created_at FROM users
       ORDER BY created_at DESC
     `);
-    res.json(resultado.rows);
+
+    // Para cada usuário, busca suas habilidades oferecidas
+    const usuariosComSkills = [];
+    for (const user of usuarios.rows) {
+      const offered = await db.query(`
+        SELECT s.name AS skill_name, os.level, os.description
+        FROM offered_skills os
+        JOIN skills s ON s.id = os.skill_id
+        WHERE os.user_id = $1
+      `, [user.id]);
+
+      usuariosComSkills.push({
+        ...user,
+        skillsOffered: offered.rows
+      });
+    }
+
+    res.json(usuariosComSkills);
   } catch (e) {
     console.error("Erro ao buscar usuários:", e);
     res.status(500).json({ erro: "Erro interno ao buscar usuários" });
