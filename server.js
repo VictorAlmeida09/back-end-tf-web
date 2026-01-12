@@ -1,7 +1,7 @@
 import pkg from "pg";
 import dotenv from "dotenv";
 import express from "express";      // Requisição do pacote do express
-
+import cors from "cors";
 // ######
 // Local onde as configurações do servidor serão feitas
 // ######
@@ -9,6 +9,7 @@ const app = express();              // Instancia o Express
 const port = 3000;                  // Define a porta
 dotenv.config();         // Carrega e processa o arquivo .env
 const { Pool } = pkg;    // Utiliza a Classe Pool do Postgres
+app.use(cors());
 
 let pool = null;
 function conectarBD() {
