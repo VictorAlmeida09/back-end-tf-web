@@ -438,6 +438,76 @@ app.post("/upload", async (req, res) => {
   }
 });
 
+// GET /matches?user_id=ID
+app.get("/matches", async (req, res) => {
+  try {
+    const userId = parseInt(req.query.user_id);
+    if (!userId) {
+      return res.status(400).json({ erro: "user_id é obrigatório" });
+    }
+
+    const db = conectarBD();
+    
+    // Busca todos os matches envolvendo o usuário
+    const result = await db.query(`
+      SELECT m.*, 
+        u1.name AS user_a_name,
+        u2.name AS user_b_name
+      FROM matches m
+      JOIN users u1 ON m.user_a_id = u1.id
+      JOIN users u2 ON m.user_b_id = u2.id
+      WHERE m.user_a_id = $1 OR m.user_b_id = $1
+      ORDER BY m.matched_at DESC
+    `, [userId]);
+
+    // Formata para incluir dados do outro usuário
+    const matches = result.rows.map(row => {
+      const isReceiver = row.user_b_id === userId;
+      return {
+        ...row,
+        other_user: {
+          id: isReceiver ? row.user_a_id : row.user_b_id,
+          name: isReceiver ? row.user_a_name : row.user_b_name
+        }
+      };
+    });
+
+    res.json(matches);
+  } catch (e) {
+    console.error("Erro ao buscar matches:", e);
+    res.status(500).json({ erro: "Erro interno" });
+  }
+});
+
+// PUT /matches/:id
+app.put("/matches/:id", async (req, res) => {
+  try {
+    const matchId = parseInt(req.params.id);
+    const { status } = req.body;
+
+    if (!['accepted', 'declined'].includes(status)) {
+      return res.status(400).json({ erro: "Status inválido" });
+    }
+
+    const db = conectarBD();
+    const result = await db.query(`
+      UPDATE matches 
+      SET status = $1, matched_at = NOW()
+      WHERE id = $2 AND status = 'suggested'
+      RETURNING *
+    `, [status, matchId]);
+
+    if (result.rows.length === 0) {
+      return res.status(400).json({ erro: "Match não encontrado ou já processado" });
+    }
+
+    res.json({ mensagem: "Match atualizado com sucesso!" });
+  } catch (e) {
+    console.error("Erro ao atualizar match:", e);
+    res.status(500).json({ erro: "Erro interno" });
+  }
+});
+
 app.listen(port, () => {
   console.log(`Serviço rodando na porta: ${port}`);
 });
