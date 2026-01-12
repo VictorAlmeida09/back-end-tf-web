@@ -1,14 +1,12 @@
 import pkg from "pg";
 import dotenv from "dotenv";
-import express from "express";      // Requisição do pacote do express
+import express from "express";
 import cors from "cors";
-// ######
-// Local onde as configurações do servidor serão feitas
-// ######
-const app = express();              // Instancia o Express
-const port = 3000;                  // Define a porta
-dotenv.config();         // Carrega e processa o arquivo .env
-const { Pool } = pkg;    // Utiliza a Classe Pool do Postgres
+
+const app = express();
+const port = 3000;
+dotenv.config();
+const { Pool } = pkg;
 app.use(cors());
 app.use(express.json());
 
@@ -22,7 +20,7 @@ function conectarBD() {
   return pool;
 }
 
-app.get("/", async (req, res) => {        // Cria endpoint na rota da raiz do projeto
+app.get("/", async (req, res) => {
   const db = new Pool({
     connectionString: process.env.URL_BD,
   });
@@ -35,25 +33,24 @@ app.get("/", async (req, res) => {        // Cria endpoint na rota da raiz do pr
   }
   console.log("Rota GET / solicitada");
   res.json({
-    message: "API para Enricar",      // Substitua pelo conteúdo da sua API
-    author: "Samuel R. Caroba",    // Substitua pelo seu nome
-    statusBD: dbStatus   // Acrescente esta linha
+    message: "API para Enricar",
+    author: "Samuel R. Caroba",
+    statusBD: dbStatus
   });
 });
-// Rota: GET /usuarios
+
 // Rota: GET /usuarios
 app.get("/usuarios", async (req, res) => {
   console.log("Rota GET /usuarios solicitada");
   try {
     const db = conectarBD();
     
-    // Busca todos os usuários
+    // ✅ ALTERAÇÃO AQUI: adicionado password_hash na query
     const usuarios = await db.query(`
-      SELECT id, name, email, contact, photo_url, created_at FROM users
+      SELECT id, name, email, contact, photo_url, created_at, password_hash FROM users
       ORDER BY created_at DESC
     `);
 
-    // Para cada usuário, busca suas habilidades oferecidas
     const usuariosComSkills = [];
     for (const user of usuarios.rows) {
       const offered = await db.query(`
@@ -83,8 +80,9 @@ app.get("/usuarios/:id", async (req, res) => {
     const id = Number(req.params.id);
     const db = conectarBD();
 
+    // ✅ Também adicionamos password_hash aqui (opcional, mas consistente)
     const usuario = await db.query(
-      "SELECT id, name, email, contact, photo_url, created_at FROM users WHERE id = $1",
+      "SELECT id, name, email, contact, photo_url, created_at, password_hash FROM users WHERE id = $1",
       [id]
     );
 
@@ -92,7 +90,6 @@ app.get("/usuarios/:id", async (req, res) => {
       return res.status(404).json({ mensagem: "Usuário não encontrado" });
     }
 
-    // Buscar habilidades oferecidas
     const offered = await db.query(`
       SELECT s.name AS skill_name, os.level, os.description
       FROM offered_skills os
@@ -100,7 +97,6 @@ app.get("/usuarios/:id", async (req, res) => {
       WHERE os.user_id = $1
     `, [id]);
 
-    // Buscar habilidades desejadas
     const wanted = await db.query(`
       SELECT s.name AS skill_name, ws.level, ws.description
       FROM wanted_skills ws
@@ -131,17 +127,16 @@ app.post("/usuarios", async (req, res) => {
 
     const db = conectarBD();
 
-    // Verificar se e-mail já existe
     const existe = await db.query("SELECT id FROM users WHERE email = $1", [email]);
     if (existe.rows.length > 0) {
       return res.status(400).json({ erro: "E-mail já cadastrado" });
     }
 
-    // Simples (em produção, use bcrypt!)
+    // ✅ Salva a senha em texto claro (só para MVP)
     const resultado = await db.query(`
       INSERT INTO users (name, email, password_hash, contact, photo_url)
       VALUES ($1, $2, $3, $4, $5)
-      RETURNING id, name, email, contact, photo_url, created_at
+      RETURNING id, name, email, contact, photo_url, created_at, password_hash
     `, [name, email, password, contact, photo_url]);
 
     res.status(201).json(resultado.rows[0]);
@@ -224,13 +219,11 @@ app.post("/usuarios/:id/skills/offered", async (req, res) => {
 
     const db = conectarBD();
 
-    // Verifica se usuário existe
     const userExists = await db.query("SELECT id FROM users WHERE id = $1", [userId]);
     if (userExists.rows.length === 0) {
       return res.status(404).json({ erro: "Usuário não encontrado" });
     }
 
-    // Garante que a skill está no catálogo
     let skill = await db.query("SELECT id FROM skills WHERE name = $1", [skill_name]);
     if (skill.rows.length === 0) {
       const novaSkill = await db.query(
@@ -354,13 +347,13 @@ app.delete("/usuarios/:id/skills/wanted/:skillName", async (req, res) => {
     res.status(500).json({ erro: "Erro interno ao remover habilidade desejada" });
   }
 });
+
 // POST /matches
 app.post("/matches", async (req, res) => {
   console.log("Rota POST /matches solicitada");
   try {
     const { user_a_id, user_b_id } = req.body;
 
-    // Validação básica
     if (!user_a_id || !user_b_id) {
       return res.status(400).json({ erro: "Os campos user_a_id e user_b_id são obrigatórios" });
     }
@@ -371,7 +364,6 @@ app.post("/matches", async (req, res) => {
 
     const db = conectarBD();
 
-    // Verifica se ambos os usuários existem
     const [userA, userB] = await Promise.all([
       db.query("SELECT id FROM users WHERE id = $1", [user_a_id]),
       db.query("SELECT id FROM users WHERE id = $1", [user_b_id])
@@ -384,7 +376,6 @@ app.post("/matches", async (req, res) => {
       return res.status(404).json({ erro: "Usuário destinatário não encontrado" });
     }
 
-    // Verifica se já existe um match entre eles (em qualquer direção)
     const existing = await db.query(`
       SELECT id FROM matches
       WHERE (user_a_id = $1 AND user_b_id = $2)
@@ -395,7 +386,6 @@ app.post("/matches", async (req, res) => {
       return res.status(409).json({ erro: "Já existe uma solicitação de match entre esses usuários" });
     }
 
-    // ✅ CORREÇÃO: usa parâmetro + cast explícito para match_status
     const result = await db.query(`
       INSERT INTO matches (user_a_id, user_b_id, status)
       VALUES ($1, $2, $3::match_status)
@@ -408,11 +398,11 @@ app.post("/matches", async (req, res) => {
     });
 
   } catch (e) {
-  console.error("Erro DETALHADO ao criar match:", e.message, e.stack);
-  res.status(500).json({ erro: "Erro interno", detalhe: e.message });
-}
+    console.error("Erro DETALHADO ao criar match:", e.message, e.stack);
+    res.status(500).json({ erro: "Erro interno", detalhe: e.message });
+  }
 });
 
 app.listen(port, () => {
-    console.log(`Serviço rodando na porta:  ${port}`);
+  console.log(`Serviço rodando na porta: ${port}`);
 });
