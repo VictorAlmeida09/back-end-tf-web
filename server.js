@@ -9,9 +9,17 @@ const app = express();              // Instancia o Express
 const port = 3000;                  // Define a porta
 dotenv.config();         // Carrega e processa o arquivo .env
 const { Pool } = pkg;    // Utiliza a Classe Pool do Postgres
-// ######
-// Local onde as rotas (endpoints) serão definidas
-// ######
+
+let pool = null;
+function conectarBD() {
+  if (!pool) {
+    pool = new Pool({
+      connectionString: process.env.URL_BD,
+    });
+  }
+  return pool;
+}
+
 app.get("/", async (req, res) => {        // Cria endpoint na rota da raiz do projeto
   const db = new Pool({
     connectionString: process.env.URL_BD,
