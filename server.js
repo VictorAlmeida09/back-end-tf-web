@@ -10,6 +10,7 @@ const port = 3000;                  // Define a porta
 dotenv.config();         // Carrega e processa o arquivo .env
 const { Pool } = pkg;    // Utiliza a Classe Pool do Postgres
 app.use(cors());
+app.use(express.json());
 
 let pool = null;
 function conectarBD() {
