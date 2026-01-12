@@ -394,12 +394,12 @@ app.post("/matches", async (req, res) => {
       return res.status(409).json({ erro: "Já existe uma solicitação de match entre esses usuários" });
     }
 
-    // Cria o novo match
+    // ✅ CORREÇÃO: usa parâmetro + cast explícito para match_status
     const result = await db.query(`
       INSERT INTO matches (user_a_id, user_b_id, status)
-      VALUES ($1, $2, 'suggested')
+      VALUES ($1, $2, $3::match_status)
       RETURNING id, user_a_id, user_b_id, status, matched_at
-    `, [user_a_id, user_b_id]);
+    `, [user_a_id, user_b_id, 'suggested']);
 
     res.status(201).json({
       mensagem: "Solicitação de match enviada com sucesso!",
