@@ -407,9 +407,9 @@ app.post("/matches", async (req, res) => {
     });
 
   } catch (e) {
-    console.error("Erro ao criar match:", e);
-    res.status(500).json({ erro: "Erro interno ao criar match" });
-  }
+  console.error("Erro DETALHADO ao criar match:", e.message, e.stack);
+  res.status(500).json({ erro: "Erro interno", detalhe: e.message });
+}
 });
 
 app.listen(port, () => {
