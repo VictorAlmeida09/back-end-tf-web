@@ -411,26 +411,37 @@ app.post("/matches", async (req, res) => {
 app.post("/upload", async (req, res) => {
   console.log("Rota POST /upload solicitada");
   try {
-    const { image } = req.body; // imagem em base64
+    const { image } = req.body;
 
+    // Validação detalhada
     if (!image) {
-      return res.status(400).json({ erro: "Imagem não fornecida" });
+      return res.status(400).json({ erro: "Nenhuma imagem enviada" });
+    }
+
+    if (typeof image !== 'string') {
+      return res.status(400).json({ erro: "Formato de imagem inválido" });
+    }
+
+    // Verifica se é base64 válido
+    if (!image.startsWith('data:image/')) {
+      return res.status(400).json({ erro: "A imagem deve ser uma string base64 válida" });
     }
 
     // Faz upload para o Cloudinary
     const result = await cloudinary.v2.uploader.upload(image, {
       folder: "skillswap/profiles",
-      resource_type: "auto",
-      overwrite: false
+      resource_type: "auto"
     });
 
+    console.log("Upload bem-sucedido:", result.secure_url);
     res.json({ url: result.secure_url });
+
   } catch (e) {
-    console.error("Erro no upload:", e.message);
-    res.status(500).json({ erro: "Falha ao fazer upload da imagem" });
+    console.error("Erro detalhado no upload:", e.message);
+    // Evita vazar dados sensíveis
+    res.status(500).json({ erro: "Falha ao processar imagem" });
   }
 });
-
 app.listen(port, () => {
   console.log(`Serviço rodando na porta: ${port}`);
 });
