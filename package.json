@@ -1,0 +1,16 @@
+{
+  "name": "nome-sua-api",
+  "version": "1.0.0",
+  "description": "descrição sua API",
+  "main": "server.js",
+  "scripts": {},
+  "keywords": [],
+  "author": "Seu Nome Completo",
+  "license": "ISC",
+  "type": "module",
+  "dependencies": {
+    "dotenv": "^17.2.3",
+    "express": "^5.2.1",
+    "pg": "^8.16.3"
+  }
+}
