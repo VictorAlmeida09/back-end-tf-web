@@ -353,6 +353,64 @@ app.delete("/usuarios/:id/skills/wanted/:skillName", async (req, res) => {
     res.status(500).json({ erro: "Erro interno ao remover habilidade desejada" });
   }
 });
+// POST /matches
+app.post("/matches", async (req, res) => {
+  console.log("Rota POST /matches solicitada");
+  try {
+    const { user_a_id, user_b_id } = req.body;
+
+    // Validação básica
+    if (!user_a_id || !user_b_id) {
+      return res.status(400).json({ erro: "Os campos user_a_id e user_b_id são obrigatórios" });
+    }
+
+    if (user_a_id == user_b_id) {
+      return res.status(400).json({ erro: "Não é possível enviar match para si mesmo" });
+    }
+
+    const db = conectarBD();
+
+    // Verifica se ambos os usuários existem
+    const [userA, userB] = await Promise.all([
+      db.query("SELECT id FROM users WHERE id = $1", [user_a_id]),
+      db.query("SELECT id FROM users WHERE id = $1", [user_b_id])
+    ]);
+
+    if (userA.rows.length === 0) {
+      return res.status(404).json({ erro: "Usuário remetente não encontrado" });
+    }
+    if (userB.rows.length === 0) {
+      return res.status(404).json({ erro: "Usuário destinatário não encontrado" });
+    }
+
+    // Verifica se já existe um match entre eles (em qualquer direção)
+    const existing = await db.query(`
+      SELECT id FROM matches
+      WHERE (user_a_id = $1 AND user_b_id = $2)
+         OR (user_a_id = $2 AND user_b_id = $1)
+    `, [user_a_id, user_b_id]);
+
+    if (existing.rows.length > 0) {
+      return res.status(409).json({ erro: "Já existe uma solicitação de match entre esses usuários" });
+    }
+
+    // Cria o novo match
+    const result = await db.query(`
+      INSERT INTO matches (user_a_id, user_b_id, status)
+      VALUES ($1, $2, 'suggested')
+      RETURNING id, user_a_id, user_b_id, status, matched_at
+    `, [user_a_id, user_b_id]);
+
+    res.status(201).json({
+      mensagem: "Solicitação de match enviada com sucesso!",
+      match: result.rows[0]
+    });
+
+  } catch (e) {
+    console.error("Erro ao criar match:", e);
+    res.status(500).json({ erro: "Erro interno ao criar match" });
+  }
+});
 
 app.listen(port, () => {
     console.log(`Serviço rodando na porta:  ${port}`);
