@@ -9,6 +9,7 @@ const app = express();              // Instancia o Express
 const port = 3000;                  // Define a porta
 dotenv.config();         // Carrega e processa o arquivo .env
 const { Pool } = pkg;    // Utiliza a Classe Pool do Postgres
+const db = conectarBD();
 // ######
 // Local onde as rotas (endpoints) serão definidas
 // ######
