@@ -2,10 +2,16 @@ import pkg from "pg";
 import dotenv from "dotenv";
 import express from "express";
 import cors from "cors";
+import cloudinary from 'cloudinary';
 
 const app = express();
 const port = 3000;
 dotenv.config();
+cloudinary.v2.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET
+});
 const { Pool } = pkg;
 app.use(cors());
 app.use(express.json());
@@ -398,6 +404,30 @@ app.post("/matches", async (req, res) => {
   } catch (e) {
     console.error("Erro DETALHADO ao criar match:", e.message, e.stack);
     res.status(500).json({ erro: "Erro interno", detalhe: e.message });
+  }
+});
+
+// Rota: POST /upload
+app.post("/upload", async (req, res) => {
+  console.log("Rota POST /upload solicitada");
+  try {
+    const { image } = req.body; // imagem em base64
+
+    if (!image) {
+      return res.status(400).json({ erro: "Imagem não fornecida" });
+    }
+
+    // Faz upload para o Cloudinary
+    const result = await cloudinary.v2.uploader.upload(image, {
+      folder: "skillswap/profiles",
+      resource_type: "auto",
+      overwrite: false
+    });
+
+    res.json({ url: result.secure_url });
+  } catch (e) {
+    console.error("Erro no upload:", e.message);
+    res.status(500).json({ erro: "Falha ao fazer upload da imagem" });
   }
 });
 
