@@ -44,7 +44,7 @@ app.get("/usuarios", async (req, res) => {
   console.log("Rota GET /usuarios solicitada");
   try {
     const db = conectarBD();
-    
+
     // ✅ ALTERAÇÃO AQUI: adicionado password_hash na query
     const usuarios = await db.query(`
       SELECT id, name, email, contact, photo_url, created_at, password_hash FROM users
@@ -161,16 +161,14 @@ app.put("/usuarios/:id", async (req, res) => {
 
     const u = atual.rows[0];
     await db.query(`
-      UPDATE users SET
-        name = $1,
-        email = $2,
-        contact = $3,
-        photo_url = $4,
-        updated_at = NOW()
-      WHERE id = $5
-    `, [
+  UPDATE users SET
+    name = $1,
+    contact = $2,
+    photo_url = $3,
+    updated_at = NOW()
+  WHERE id = $4
+`, [
       name ?? u.name,
-      email ?? u.email,
       contact ?? u.contact,
       photo_url ?? u.photo_url,
       id
