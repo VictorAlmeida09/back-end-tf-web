@@ -185,6 +185,113 @@ https://back-end-tf-web-beryl.vercel.app/
 
 ---
 
+### 🤝 Matches
+
+#### **[POST] `/matches`**
+- **Descrição**: Cria uma nova solicitação de match entre dois usuários.
+- **Corpo da requisição (JSON)**:
+  ```json
+  {
+    "user_a_id": 1,
+    "user_b_id": 2
+  }
+  ```
+- **Regras de validação**:
+  - Ambos os IDs devem existir na tabela `users`
+  - Não é permitido `user_a_id == user_b_id`
+  - Não pode haver um match já existente entre os mesmos usuários (em qualquer direção)
+- **Resposta de sucesso (201 Created)**:
+  ```json
+  {
+    "mensagem": "Solicitação de match enviada com sucesso!",
+    "match": {
+      "id": 3,
+      "user_a_id": 1,
+      "user_b_id": 2,
+      "status": "suggested",
+      "matched_at": "2026-01-19T14:30:00Z"
+    }
+  }
+  ```
+- **Possíveis erros**:
+  - `400 Bad Request`: Campos ausentes ou tentativa de auto-match
+  - `404 Not Found`: Um dos usuários não existe
+  - `409 Conflict`: Match já existe entre esses usuários
+  - `500 Internal Server Error`: Erro no banco de dados (ex: tipo `match_status` ausente)
+
+---
+
+#### **[GET] `/matches?user_id={id}`**
+- **Descrição**: Retorna todos os matches em que o usuário participa (como remetente ou destinatário).
+- **Parâmetro obrigatório**:
+  - `user_id` (inteiro): ID do usuário logado
+- **Exemplo de requisição**:
+  ```
+  GET /matches?user_id=1
+  ```
+- **Resposta de sucesso (200 OK)**:
+  ```json
+  [
+    {
+      "id": 3,
+      "user_a_id": 1,
+      "user_b_id": 2,
+      "status": "suggested",
+      "matched_at": "2026-01-19T14:30:00Z",
+      "other_user": {
+        "id": 2,
+        "name": "Ana Silva",
+        "contact": "(11) 99999-8888"
+      }
+    },
+    {
+      "id": 5,
+      "user_a_id": 3,
+      "user_b_id": 1,
+      "status": "accepted",
+      "matched_at": "2026-01-18T10:15:00Z",
+      "other_user": {
+        "id": 3,
+        "name": "Carlos Mendes",
+        "contact": "carlos@email.com"
+      }
+    }
+  ]
+  ```
+- **Possíveis erros**:
+  - `400 Bad Request`: Parâmetro `user_id` ausente
+  - `500 Internal Server Error`: Falha na consulta ao banco
+
+---
+
+#### **[PUT] `/matches/{id}`**
+- **Descrição**: Atualiza o status de um match pendente (aceitar ou recusar).
+- **Parâmetro de rota**:
+  - `id` (inteiro): ID do match
+- **Corpo da requisição (JSON)**:
+  ```json
+  {
+    "status": "accepted"
+  }
+  ```
+- **Valores permitidos para `status`**:
+  - `"accepted"` → aceita a solicitação
+  - `"declined"` → recusa a solicitação
+- **Regras**:
+  - Só é possível atualizar matches com status `"suggested"`
+  - Qualquer outro status (`accepted`, `declined`) resulta em erro
+- **Resposta de sucesso (200 OK)**:
+  ```json
+  {
+    "mensagem": "Match atualizado com sucesso!"
+  }
+  ```
+- **Possíveis erros**:
+  - `400 Bad Request`: Status inválido ou match já processado
+  - `404 Not Found`: Match não encontrado
+  - `500 Internal Server Error`: Erro no banco
+---
+
 ## ⚙️ Tecnologias Utilizadas
 - **Linguagem**: Node.js (ES Modules)
 - **Framework**: Express.js
